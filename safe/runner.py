@@ -1,79 +1,88 @@
 __author__ = 'sumeet'
 
-import sys
 import cherrypy
+import getopt
+import sys
+from safe_box import SafeBox
+from cli import Cli
 
-# file management
-import json
-import os
-from crypto_manager import CryptoManager
+def usage(message=None):
+    code = 0
+    if message:
+        print message
+        code = 1
+
+    print "usage: runner.py -s|--server -l|--location=<safe location> -m|--master=<master password>\n" \
+          "       runner.py -c|--client -a|--app=<app name>\n" \
+          "       runner.py -c|--client -a|--app=<app name> -u|--user=<username> -p|--password=<site password>\n" \
+          "       runner.py -h|--help"
+    sys.exit(code)
 
 
-class InvalidFilePath(Exception):
-    def __init__(self):
-        pass
+def check_arg(var, message):
+    if var is None:
+        usage(message)
 
 
-class SafeBox(object):
-    def __init__(self, location, password):
-        cherrypy.log("location: {location}, password: {password}".format(location=location, password=password))
+def main(argv):
+    opts = None
+    try:
+        opts, args = getopt.getopt(argv[1:],
+                                   'hcsl:a:u:p:m:',
+                                   ["help", "client", "server", "location=", "app=", "user=", "password=", "master="])
+    except getopt.GetoptError as err:
+        usage(err)
 
-        if not os.path.exists(location):
-            raise InvalidFilePath
+    client = None
+    server = None
+    location = None
+    master = None
+    app = None
+    user = None
+    password = None
 
-        self.filepath = os.path.join(location, 'safe.json')
-        self.crypto = CryptoManager(password)
-
-    def get_data(self):
-        data = {}
-        enc_filepath = self.filepath + '.enc'
-        if not os.path.isfile(enc_filepath):
-            return data
-
-        self.crypto.decrypt_file(enc_filepath)
-
-        with open(self.filepath, 'r') as data_file:
-            data = json.load(data_file)
-
-        os.unlink(self.filepath)
-        return data
-
-    def save_data(self, data):
-        with open(self.filepath, 'w') as safe_file:
-            safe_file.write(json.dumps(data))
-
-        self.crypto.encrypt_file(self.filepath)
-        os.unlink(self.filepath)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    def save(self):
-        data = self.get_data()
-        sites = cherrypy.request.json
-        cherrypy.log("sites: {sites}".format(sites=sites))
-        for site in sites.keys():
-            data[site] = sites[site]
-
-        self.save_data(data)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get(self, site):
-        data = self.get_data()
-        if site in data:
-            return data[site]
+    for option, argument in opts:
+        if option in ('-s', '--server'):
+            server = True
+        elif option in ('-c', '--client'):
+            client = True
+        elif option in ('-l', '--location'):
+            location = argument
+        elif option in ('-m', '--master'):
+            master = argument
+        elif option in ('-a', '--app'):
+            app = argument
+        elif option in ('-u', '--user'):
+            user = argument
+        elif option in ('-p', '--password'):
+            password = argument
+        elif option == 'h':
+            usage()
         else:
-            raise cherrypy.HTTPError(404, 'site not found')
+            assert False, "unhandled option"
 
+    if server:
+        check_arg(location, "location of safe required")
+        check_arg(master, "master password of safe required")
 
-def main(*args):
-    conf = {
-        '/': {
-            'tools.sessions.on': True
+        conf = {
+            '/': {
+                'tools.sessions.on': True
+            }
         }
-    }
 
-    cherrypy.quickstart(SafeBox(*args), '/', conf)
+        cherrypy.quickstart(SafeBox(location, master), '/', conf)
+    elif client:
+        check_arg(app, "app is required")
+        cli = Cli('http://localhost:8080')
+
+        if user is None and password is None:
+            cli.get(app)
+        else:
+            check_arg(user, "username of app required")
+            check_arg(password, "password of app required")
+            cli.save(app, user, password)
+
 
 if __name__ == '__main__':
-    main(*sys.argv[1:])
+    main(sys.argv)

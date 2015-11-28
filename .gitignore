@@ -1,3 +1,4 @@
 *.enc
 *.iml
 .idea
+*.pyc
