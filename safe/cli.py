@@ -4,6 +4,7 @@ __author__ = 'sumeet'
 
 import requests
 import json
+import subprocess
 
 
 class ErrorSaving(Exception):
@@ -40,3 +41,12 @@ class Cli:
         print("app: {app} user: {user} password: {password}".format(app=app,
                                                                     user=data.keys()[0],
                                                                     password=data.values()[0]))
+
+        self.write_to_clipboard(data.values()[0])
+
+    @staticmethod
+    def write_to_clipboard(output):
+        process = subprocess.Popen(
+            'pbcopy', env={'LANG': 'en_US.UTF-8'}, stdin=subprocess.PIPE)
+        process.communicate(output.encode())
+

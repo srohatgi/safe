@@ -6,15 +6,16 @@ import sys
 from safe_box import SafeBox
 from cli import Cli
 
+
 def usage(message=None):
     code = 0
     if message:
         print message
         code = 1
 
-    print "usage: runner.py -s|--server -l|--location=<safe location> -m|--master=<master password>\n" \
-          "       runner.py -c|--client -a|--app=<app name>\n" \
-          "       runner.py -c|--client -a|--app=<app name> -u|--user=<username> -p|--password=<site password>\n" \
+    print "usage: runner.py -s|--server -l|--location <safe location> -m|--master <master password>\n" \
+          "       runner.py -c|--client -a|--app <app name>\n" \
+          "       runner.py -c|--client -a|--app <app name> -u|--user <username> -p|--password <site password>\n" \
           "       runner.py -h|--help"
     sys.exit(code)
 
