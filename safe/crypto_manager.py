@@ -10,7 +10,7 @@ from Crypto.Cipher import AES
 class CryptoManager:
     def __init__(self, password):
         """
-
+        TODO: convert to using RSA keypair
         :param password:
                 The encryption password.
         """
